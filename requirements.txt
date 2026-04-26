@@ -1,4 +1,9 @@
 python-telegram-bot
+google-generativeai
+requests
+pymupdf
+apscheduler
+pytzpython-telegram-bot
 anthropic
 requests
 pymupdf

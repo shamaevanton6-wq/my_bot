@@ -1,18 +1,19 @@
 import os
-import io
 import requests
 import fitz
-import anthropic
 import sqlite3
 from datetime import datetime
 import pytz
+import google.generativeai as genai
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-CLAUDE_API_KEY = os.environ.get("CLAUDE_API_KEY")
-YOUR_CHAT_ID = os.environ.get("YOUR_CHAT_ID")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+genai.configure(api_key=GEMINI_API_KEY)
+gemini = genai.GenerativeModel("gemini-pro")
 
 PDF_URL = "https://www.caica.ru/ANI_Official/notam/dnldnotam/notam-rus_{date}_0600.pdf"
 KEYWORDS = ["УЛКК", "УЛВВ", "УЛВЦ", "УЛВУ"]
@@ -47,7 +48,8 @@ def download_and_parse():
     if not found:
         return "📭 Сегодня абзацев с УЛКК, УЛВВ, УЛВЦ, УЛВУ не найдено."
 
-    result = f"📋 NOTAM на {datetime.now(pytz.timezone('Europe/Moscow')).strftime('%d.%m.%Y')}:\n\n"
+    moscow = pytz.timezone("Europe/Moscow")
+    result = f"📋 NOTAM на {datetime.now(moscow).strftime('%d.%m.%Y')}:\n\n"
     result += "\n\n---\n\n".join(found)
     return result
 
@@ -109,15 +111,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if context.user_data.get("mode") == "ai":
-        client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
         await update.message.reply_text("⏳ Думаю...")
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": text}]
-        )
+        response = gemini.generate_content(text)
         context.user_data["mode"] = None
-        await update.message.reply_text(response.content[0].text)
+        await update.message.reply_text(response.text)
+        return
 
 async def daily_notam(bot):
     users = get_all_users()
