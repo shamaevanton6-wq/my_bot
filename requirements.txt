@@ -1,2 +1,7 @@
 python-telegram-bot
 anthropic
+requests
+pymupdf
+apscheduler
+pytzpython-telegram-bot
+anthropic
